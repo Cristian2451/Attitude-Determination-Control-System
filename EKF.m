@@ -1,0 +1,22 @@
+function [x_a, P] = EKF(q, w, T_rw, f, q_EKF_e, w_EKF_e, T_rw_e, dt, P, Q, R, R_bi,s_b,s_i)
+x_b = [q; w]; 
+u = T_rw;
+F = jacobian(f, x_b); 
+G = jacobian(f, u);
+A_1 = diff(R_bi,q(1));
+A_2 = diff(R_bi,q(2));
+A_3 = diff(R_bi,q(3));
+A_4 = diff(R_bi,q(4));
+H = [A_1*s_i A_2*s_i A_3*s_i A_4*s_i zeros(3)];
+H_new = double(subs(H, q, q_EKF_e));
+F = double(subs(F, [q; w], [q_EKF_e; w_EKF_e])); 
+G = double(subs(G, u, T_rw_e));
+phi = expm(F*dt);
+x_b_n = phi * [q_EKF_e; w_EKF_e] + G * dt * T_rw_e;
+P_b = phi * P * phi' + Q;
+K = P_b * H_new' / (H_new * P_b * H_new' + R);
+A = double(subs(R_bi, q, x_b_n(1:4)));
+P = P_b - K * H_new * P_b;
+x_a = x_b_n + K*(s_b - A*s_i);
+x_a(1:4) = x_a(1:4) / norm(x_a(1:4));
+end
